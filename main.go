@@ -36,7 +36,7 @@ func runMain(ctx context.Context, rawArgs []string, logger *zap.SugaredLogger) e
 		return err
 	}
 
-	conn, err := CreateNewGRPCClient(ctx, parsedArgs, logger)
+	conn, err := createNewGRPCClient(ctx, parsedArgs, logger)
 	if err != nil {
 		return err
 	}
@@ -44,24 +44,31 @@ func runMain(ctx context.Context, rawArgs []string, logger *zap.SugaredLogger) e
 	client := NewPackageClientFromConn(conn)
 	u := uuid.New()
 
-	req := &v1.StartMappingSessionRequest{
+	reqStart := &v1.StartMappingSessionRequest{
 		OrganizationId: parsedArgs.OrganizationID,
 		LocationId:     parsedArgs.LocationID,
 		RobotId:        parsedArgs.RobotID,
 		MapName:        u.String(),
 	}
 
-	resp, err := client.StartMappingSession(ctx, req)
+	respStart, err := client.StartMappingSession(ctx, reqStart)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%#v\n", resp)
+	fmt.Printf("StartMappingSessionResponse: %#v\n", respStart.String())
+
+	reqGetMetadata := &v1.GetMappingSessionMetadataByIDRequest{SessionId: respStart.SessionId}
+	respGetMetadata, err := client.GetMappingSessionMetadataByID(ctx, reqGetMetadata)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("GetMappingSessionMetadataByIDResponse: %#v\n", respGetMetadata.String())
 
 	return nil
 }
 
-// CreateNewGRPCClient creates a new grpc cloud configured to communicate with the robot service based on the cloud config given.
-func CreateNewGRPCClient(ctx context.Context, args Args, logger golog.Logger) (rpc.ClientConn, error) {
+// createNewGRPCClient creates a new grpc cloud configured to communicate with the robot service based on the cloud config given.
+func createNewGRPCClient(ctx context.Context, args Args, logger golog.Logger) (rpc.ClientConn, error) {
 	u, err := url.Parse(args.AppAddress)
 	if err != nil {
 		return nil, err
